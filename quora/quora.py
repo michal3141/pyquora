@@ -55,6 +55,14 @@ def extract_username(username):
         else:
             return None
 
+def get_with_agent(url):
+    """ Performs get method adding user agent information in header
+    """
+    user_agent = {
+        'User-agent': ' Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0',
+    }
+    return requests.get(url, headers=user_agent)
+
 ####################################################################
 # API
 ####################################################################
@@ -181,6 +189,26 @@ class Quora:
             return question_dict
         except:
             return {}
+
+    @staticmethod
+    def get_snippets_by_query(query):
+        """Obtains snippets returned by the search
+
+        :param query: Query for quora search e.g. 'isis'
+        :type query: str.
+        :returns:  list<str> - the list of snippets found for particular query.
+        """
+        url = 'https://www.quora.com/search?q=%s' % query
+        
+        soup = BeautifulSoup(get_with_agent(url).text)
+
+        # Getting text snippets from 'search_result_snippet' span
+        search_result_snippets = [snippet.text for snippet in soup.find_all(
+            'span', 
+            attrs={'class' : 'search_result_snippet'}
+        )]
+
+        return search_result_snippets
 
     ### Legacy API
     @staticmethod
