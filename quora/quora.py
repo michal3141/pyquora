@@ -159,7 +159,7 @@ class Quora:
         """ (soup) -> dict
         Returns details about the question.
         """
-        soup = BeautifulSoup(requests.get('http://www.quora.com/' + question).text)
+        soup = BeautifulSoup(requests.get('https://www.quora.com/' + question).text)
         return Quora.scrape_question_stats(soup)
 
     @staticmethod
@@ -167,27 +167,33 @@ class Quora:
         """ (soup) -> dict
         Scrapes the soup object to get details of a question.
         """
+
         try:
-            raw_topics = soup.find_all('span', attrs={'itemprop' : 'title'})
+            raw_topics = soup.find('div', attrs={'class': 'question_page_topic_section QuestionTopicsSidebar'}
+                                    ).find_all('span', attrs={'class' : 'TopicNameSpan TopicName'})
             topics = []
             for topic in raw_topics:
                 topics.append(topic.string)
 
-            want_answers = soup.find('span', attrs={'class' : 'count'}).string
+            #want_answers = soup.find('span', attrs={'class' : 'count'}).string
+            want_answers = "0"
             answer_count = soup.find('div', attrs={'class' : 'answer_count'}).next.split()[0]
-            question_text = list(soup.find('div', attrs = {'class' : 'question_text_edit'}).find('h1').children)[-1]
-            question_details = soup.find('div', attrs = {'class' : 'question_details_text'})
-            answer_wiki = soup.find('div', attrs = {'class' : 'AnswerWikiArea'}).find('div')
-
+            question_text = soup.find('div', attrs={'class' : 'QuestionArea'}).find('h1').contents[1].text
+            question_details = soup.find('div', attrs={'class' : 'question_details_text'})
+            answer_wiki = soup.find('div', attrs={'class' : 'AnswerWikiArea'}).find('div')
+            related_questions = [str(question.contents[1]) for question in 
+                                    soup.find_all('span', attrs={'class' : 'question_text'})]
             question_dict = {'want_answers' : try_cast_int(want_answers),
                              'answer_count' : try_cast_int(answer_count),
-                             'question_text' : question_text.string,
+                             'question_text' : question_text,
                              'topics' : topics,
                              'question_details' : str(question_details),
                              'answer_wiki' : str(answer_wiki),
+                             'related_questions': str(related_questions),
                             }
             return question_dict
-        except:
+        except Exception as e:
+            print str(e)
             return {}
 
     @staticmethod
