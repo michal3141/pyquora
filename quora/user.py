@@ -6,6 +6,25 @@ import feedparser
 import re
 import requests
 import string
+import time
+
+from pyvirtualdisplay import Display
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+
+# 0 - Xvfb (not visible)
+# 1 - Xephyr (visible)
+display = Display(visible=0, size=(800,600))
+display.start()
+
+# FIXME: Hardcoded path to Chrome profile config 
+CHROME_PROFILE_PATH = '/home/michal3141/.config/google-chrome/Default'
+options = webdriver.ChromeOptions() 
+options.add_argument("user-data-dir=%s" % CHROME_PROFILE_PATH) #Path to your chrome profile
+
+# Launching Chrome browser
+browser = webdriver.Chrome(chrome_options=options)
 
 ### Configuration ###
 POSSIBLE_FEED_KEYS = ['link', 'id', 'published', 'title', 'summary']
@@ -78,6 +97,15 @@ def check_activity_type(entry):
     else:
         return ACTIVITY_ITEM_TYPES.UPVOTE
 
+def unscroll_page(browser, sleep_time=0.5):
+    # Fetch page
+    src_updated = browser.page_source
+    src = ""
+    while src != src_updated:
+        time.sleep(sleep_time)
+        src = src_updated
+        browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        src_updated = browser.page_source
 
 ####################################################################
 # API
@@ -89,9 +117,9 @@ class User:
         self._activity = None
 
     @property
-    def stats(self):
+    def stats(self, followers=False, following=False):
         if self._stats is None:
-            self._stats = self.get_user_stats(self.user)
+            self._stats = self.get_user_stats(self.user, followers=followers, following=following)
         return self._stats
 
     @property
@@ -101,9 +129,9 @@ class User:
         return self._activity
 
     @staticmethod
-    def get_user_stats(user):
+    def get_user_stats(user, followers=False, following=False):
         try:
-            soup = BeautifulSoup(requests.get('http://www.quora.com/' + user).text)
+            soup = BeautifulSoup(requests.get('https://www.quora.com/' + user).text)
             data_stats = []
             name = get_name(soup)
             err = None
@@ -112,19 +140,48 @@ class User:
                 data_stats.append(item.string)
             data_stats = map(try_cast_int, data_stats)
 
+            followers_count = data_stats[3]
+            following_count = data_stats[4]
+
             user_dict = {'answers'   : data_stats[1],
                          'blogs'     : err,
                          'edits'     : data_stats[5],
-                         'followers' : data_stats[3],
-                         'following' : data_stats[4],
+                         'followers_count' : followers_count,
+                         'following_count' : following_count,
                          'name'      : name,
                          'posts'     : data_stats[2],
                          'questions' : data_stats[0],
                          'topics'    : err,
                          'username'  : user }
+
+            if followers:
+                user_dict['followers'] = User.get_user_followers(user)
+            if following:
+                user_dict['following'] = User.get_user_following(user)                 
             return user_dict
-        except:
+        except Exception as e:
+            print str(e)
             return {}
+
+    @staticmethod
+    def get_user_followers(user):
+        browser.get('https://www.quora.com/%s/followers' % user)
+
+        unscroll_page(browser)
+
+        followers_elems = browser.find_elements_by_css_selector('a.user')
+        followers = [follower.text for follower in followers_elems]
+        return followers
+
+    @staticmethod
+    def get_user_following(user):
+        browser.get('https://www.quora.com/%s/following' % user)
+
+        unscroll_page(browser)
+
+        following_elems = browser.find_elements_by_css_selector('a.user')
+        followings = [following.text for following in following_elems]
+        return followings       
 
     @staticmethod
     def get_user_activity(user):

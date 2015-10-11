@@ -32,14 +32,13 @@ def get_question_link(soup):
     Returns the link at which the question can is present.
     """
     question_link = soup.find('a', attrs = {'class' : 'question_link'})
-    return 'http://www.quora.com' + question_link.get('href')
+    return 'https://www.quora.com' + question_link.get('href')
 
 def get_author(soup):
     """ (soup) -> str
     Returns the name of the author
     """
-    raw_author = soup.find('div', attrs = {'class' : 'author_info'}).next.get('href')
-    author = raw_author.split('/')[-1]
+    author = soup.find('a', attrs = {'class' : 'user'}).contents[0]
     return author
 
 def extract_username(username):
@@ -81,7 +80,7 @@ class Quora:
             else: # question like znrZ3
                 soup = BeautifulSoup(requests.get('http://qr.ae/' + question).text)
         else:
-            soup = BeautifulSoup(requests.get('http://www.quora.com/' + question + '/answer/' + author).text)
+            soup = BeautifulSoup(requests.get('https://www.quora.com/' + question + '/answer/' + author).text)
         return Quora.scrape_one_answer(soup)
 
     @staticmethod
@@ -89,25 +88,28 @@ class Quora:
         """ (soup) -> dict
         Scrapes the soup object to get details of an answer.
         """
+        #print 'scrape_one_answer::'
         try:
-            answer = soup.find('div', id = re.compile('_answer_content$')).find('div', id = re.compile('_container'))
+            answer = soup.find('div', id = re.compile('_answer_content$')).find('div', id = re.compile('_container')).text
             question_link = get_question_link(soup)
             author = get_author(soup)
-            views = soup.find('span', attrs = {'class' : 'stats_row'}).next.next.next.next
+            views = soup.find('div', attrs={'class' : 'AnswerHeader ContentHeader'}).text
+            #views = soup.find('span', attrs = {'class' : 'stats_row'}).next.next.next.next
             want_answers = soup.find('span', attrs = {'class' : 'count'}).string
 
             try:
-                upvote_count = soup.find('a', attrs = {'class' : 'vote_item_link'}).find('span', attrs = {'class' : 'count'}).string
+                upvote_count = soup.find('a', attrs = {'class' : 'AnswerUpvotesStatsRow StatsRow'}).text
                 if upvote_count is None:
                     upvote_count = 0
             except:
                 upvote_count = 0
 
             try:
-                comment_count = soup.find_all('a', id = re.compile('_view_comment_link'))[-1].find('span').string
-                # '+' is dropped from the number of comments.
+                comment_count = soup.find('a', attrs = {'class' : 'view_comments'})
+                # print 'comment_count:', comment_count
                 # Only the comments directly on the answer are considered. Comments on comments are ignored.
-            except:
+            except Exception as e:
+                print str(e)
                 comment_count = 0
 
             answer_stats = map(try_cast_int, [views, want_answers, upvote_count, comment_count])
@@ -116,12 +118,13 @@ class Quora:
                            'want_answers' : answer_stats[1],
                            'upvote_count' : answer_stats[2],
                            'comment_count' : answer_stats[3],
-                           'answer' : str(answer),
+                           'answer' : answer,
                            'question_link' : question_link,
                            'author' : author
                           }
             return answer_dict
-        except:
+        except Exception as e:
+            print str(e)
             return {}
 
     @staticmethod
@@ -129,7 +132,7 @@ class Quora:
         """ (str) -> list
         Takes the title of one question and returns the latest answers to that question.
         """
-        soup = BeautifulSoup(requests.get('http://www.quora.com/' + question + '/log').text)
+        soup = BeautifulSoup(requests.get('https://www.quora.com/' + question + '/log').text)
         authors =  Quora.scrape_latest_answers(soup)
         return [Quora.get_one_answer(question, author) for author in authors]
 
@@ -150,8 +153,10 @@ class Quora:
                         username = extract_username(username)
                         if username not in authors:
                             authors.append(username)
+            print authors
             return authors
-        except:
+        except Exception as e:
+            print str(e)
             return []
 
     @staticmethod
