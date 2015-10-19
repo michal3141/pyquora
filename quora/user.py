@@ -15,7 +15,7 @@ from selenium.webdriver.chrome.options import Options
 
 # 0 - Xvfb (not visible)
 # 1 - Xephyr (visible)
-display = Display(visible=0, size=(800,600))
+display = Display(visible=1, size=(800,600))
 display.start()
 
 # FIXME: Hardcoded path to Chrome profile config 
