@@ -209,6 +209,7 @@ class Quora:
                     related_questions.append(question_text)
                 except:
                     print 'Skipping question: ', question.contents[0]
+            last_asked = soup.find('div', attrs={'class': 'QuestionLastAskedTime'}).text
 
             question_dict = {'want_answers': try_cast_int(want_answers),
                              'answer_count': try_cast_int(answer_count),
@@ -217,6 +218,7 @@ class Quora:
                              'question_details': str(question_details),
                              'answer_wiki': str(answer_wiki),
                              'related_questions': related_questions,
+                             'last_asked': last_asked.replace('Last asked: ', '')
                              }
             return question_dict
         except Exception as e:
