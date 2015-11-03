@@ -24,7 +24,11 @@ options = webdriver.ChromeOptions()
 options.add_argument("user-data-dir=%s" % CHROME_PROFILE_PATH) #Path to your chrome profile
 
 # Launching Chrome browser
-browser = webdriver.Chrome(chrome_options=options)
+browser = None
+def get_browser():
+    if browser is None:
+        browser = webdriver.Chrome(chrome_options=options)
+    return browser
 
 ### Configuration ###
 POSSIBLE_FEED_KEYS = ['link', 'id', 'published', 'title', 'summary']
@@ -116,7 +120,6 @@ class User:
         self._stats = None
         self._activity = None
 
-    @property
     def stats(self, followers=False, following=False):
         if self._stats is None:
             self._stats = self.get_user_stats(self.user, followers=followers, following=following)
@@ -165,21 +168,21 @@ class User:
 
     @staticmethod
     def get_user_followers(user):
-        browser.get('https://www.quora.com/%s/followers' % user)
+        get_browser().get('https://www.quora.com/%s/followers' % user)
 
-        unscroll_page(browser)
+        unscroll_page(get_browser())
 
-        followers_elems = browser.find_elements_by_css_selector('a.user')
+        followers_elems = get_browser().find_elements_by_css_selector('a.user')
         followers = [follower.text for follower in followers_elems]
         return followers
 
     @staticmethod
     def get_user_following(user):
-        browser.get('https://www.quora.com/%s/following' % user)
+        get_browser().get('https://www.quora.com/%s/following' % user)
 
-        unscroll_page(browser)
+        unscroll_page(get_browser())
 
-        following_elems = browser.find_elements_by_css_selector('a.user')
+        following_elems = get_browser().find_elements_by_css_selector('a.user')
         followings = [following.text for following in following_elems]
         return followings       
 
