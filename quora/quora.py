@@ -15,8 +15,9 @@ def try_cast_int(s):
     ('2 upvotes') -> 2
     ('2.2k upvotes') -> 2200
     """
+    s = s.replace(',', '')
     try:
-        pattern = re.compile(r'([0-9]+(\.[0-9]+)*[ ]*[Kk])|([0-9]+)')
+        pattern = re.compile(r'([0-9]+(\,[0-9]+)*[ ]*[Kk])|([0-9]+)')
         raw_result = re.search(pattern, s).groups()
         if raw_result[2] != None:
             return int(raw_result[2])
@@ -88,6 +89,7 @@ class Quora:
             else:  # question like znrZ3
                 soup = BeautifulSoup(requests.get('https://qr.ae/' + question).text)
         else:
+            # print 'author:', author
             soup = BeautifulSoup(requests.get('https://www.quora.com/' + question + '/answer/' + author).text)
         return Quora.scrape_one_answer(soup)
 
@@ -98,7 +100,6 @@ class Quora:
         """
         # print 'scrape_one_answer::'
         try:
-
             answer = soup.find('div', attrs={'class': 'inline_editor_content'}).text
             question_link = get_question_link(soup)
             author = get_author(soup)
@@ -144,7 +145,9 @@ class Quora:
         Takes the title of one question and returns the latest answers to that question.
         """
         soup = BeautifulSoup(requests.get('https://www.quora.com/' + question + '/log').text)
-        authors = Quora.scrape_latest_answers(soup)
+
+        # Again: Ugly but need to extract author from possible profile/<author>
+        authors = [author.split('/')[-1] for author in Quora.scrape_latest_answers(soup)]
         return [Quora.get_one_answer(question, author) for author in authors]
 
     @staticmethod
@@ -164,7 +167,7 @@ class Quora:
                         username = extract_username(username)
                         if username not in authors:
                             authors.append(username)
-            # print authors
+            print 'authors:', authors
             return authors
         except Exception as e:
             print str(e)

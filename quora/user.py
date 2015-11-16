@@ -26,6 +26,7 @@ options.add_argument("user-data-dir=%s" % CHROME_PROFILE_PATH) #Path to your chr
 # Launching Chrome browser
 browser = None
 def get_browser():
+    global browser
     if browser is None:
         browser = webdriver.Chrome(chrome_options=options)
     return browser
