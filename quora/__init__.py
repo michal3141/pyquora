@@ -5,5 +5,5 @@ Source: https://github.com/csu/pyquora.
 Use help(quora.quora) or help(quora.user) for more help.
 """
 
-from user import User, Activity
+from user import User, Activity, unscroll_page
 from quora import Quora, try_cast_int

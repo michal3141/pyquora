@@ -6,6 +6,30 @@ import requests
 import sys
 import traceback
 
+from pyvirtualdisplay import Display
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+
+# 0 - Xvfb (not visible)
+# 1 - Xephyr (visible)
+display = Display(visible=1, size=(800,600))
+display.start()
+
+# FIXME: Hardcoded path to Chrome profile config 
+CHROME_PROFILE_PATH = '/home/michal3141/.config/google-chrome/Default'
+options = webdriver.ChromeOptions() 
+options.add_argument("user-data-dir=%s" % CHROME_PROFILE_PATH) #Path to your chrome profile
+
+# Launching Chrome browser
+browser = None
+def get_browser():
+    global browser
+    if browser is None:
+        browser = webdriver.Chrome(chrome_options=options)
+    return browser
+
+
 ####################################################################
 # Helpers
 ####################################################################
@@ -77,6 +101,22 @@ class Quora:
     """
     The class that contains functions required to fetch details of questions and answers.
     """
+
+    @staticmethod 
+    def get_authors_of_questions_and_answers(question):
+        from user import unscroll_page
+        get_browser().get('https://www.quora.com/%s/log' % question)
+        unscroll_page(get_browser())
+        elems = get_browser().find_elements_by_class_name('feed_item_activity')
+        answers_authors = []
+        question_author = ''
+        for elem in elems: 
+            if 'Answer added by' in elem.text:
+                author = elem.text.replace('Answer added by', '')
+                answers_authors.append(author.strip())
+            elif 'Question added by' in elem.text:
+                question_author = elem.text.replace('Question added by', '').strip()
+        return (question_author, answers_authors)
 
     @staticmethod
     def get_one_answer(question, author=None):
